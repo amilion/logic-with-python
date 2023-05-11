@@ -284,7 +284,6 @@ def synthesize(variables: Sequence[str], values: Iterable[bool]) -> Formula:
         else:
             formula = Formula("|", formula, Formula(
                 "~", _synthesize_for_model(model)))
-    # import pdb;pdb.set_trace()
     return formula
 
 
