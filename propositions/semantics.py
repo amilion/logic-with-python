@@ -273,17 +273,21 @@ def synthesize(variables: Sequence[str], values: Iterable[bool]) -> Formula:
     """
     assert len(variables) > 0
     # Task 2.7
-    models = list(all_models(variables))
-    if values[0]:
-        formula = _synthesize_for_model(models[0])
-    else:
-        formula = Formula("~", _synthesize_for_model(models[0]))
-    for ind, model in enumerate(models[1:]):
-        if values[ind+1]:
-            formula = Formula("|", formula, _synthesize_for_model(model))
-        else:
-            formula = Formula("|", formula, Formula(
-                "~", _synthesize_for_model(model)))
+    models = all_models(variables)
+    ands = []
+    has_true = False
+    for ind, flag in enumerate(values):
+        if flag:
+            has_true = True
+            model = models[ind]
+            ands.append(_synthesize_for_model(model))
+    if not has_true:
+        for variable in variables:
+            and_formula = Formula("&", Formula(variable), Formula("~", Formula(variable)))
+            ands.append(and_formula)
+    formula = ands[0]
+    for clause in ands[1:]:
+        formula = Formula("|", formula, clause)
     return formula
 
 
@@ -302,6 +306,16 @@ def _synthesize_for_all_except_model(model: Model) -> Formula:
     assert is_model(model)
     assert len(model.keys()) > 0
     # Optional Task 2.8
+    literals = []
+    for variable, flag in model.items():
+        if flag:
+            literals.append(Formula("~", Formula(variable)))
+        else:
+            literals.append(Formula(variable))
+    formula = literals[0]
+    for literal in literals[1:]:
+        formula = Formula("|", formula, literal)
+    return formula
 
 
 def synthesize_cnf(variables: Sequence[str], values: Iterable[bool]) -> Formula:
@@ -328,6 +342,22 @@ def synthesize_cnf(variables: Sequence[str], values: Iterable[bool]) -> Formula:
     """
     assert len(variables) > 0
     # Optional Task 2.9
+    has_false = 0
+    clauses = []
+    models = all_models(variables)
+    for ind, flag in enumerate(values):
+        if not flag:
+            has_false = 1
+            clause = _synthesize_for_all_except_model(models[ind])
+            clauses.append(clause)
+    if not has_false:
+        for variable in variables:
+            clause = Formula("|", Formula(variable), Formula("~", Formula(variable)))
+            clauses.append(clause)
+    formula = clauses[0]
+    for clause in clauses[1:]:
+        formula = Formula("&", formula, clause)
+    return formula
 
 
 def evaluate_inference(rule: InferenceRule, model: Model) -> bool:

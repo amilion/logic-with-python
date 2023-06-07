@@ -101,8 +101,14 @@ parsing_tests = [('', None, ''),
                  ('((p->q)->(~q->~p)->T)', None, ''),
                  ('(x|y|z)', None, ''),
                  ('~((~x17->p)&~~(~F|~p))', '~((~x17->p)&~~(~F|~p))', ''),
-                 ('((((p|q))', None, '')]
-
+                 ('((((p|q))', None, ''),
+                 ('(x-&y)', '(x-&y)', ''),
+                 ('(x-&y-|p)', None, ''),
+                 ('~~~((p-&y)<->~~(p12+q12))', '~~~((p-&y)<->~~(p12+q12))', ''),
+                 ('~~~((p-&y)<->(~~(p12+q12)))', None, '')]
+# parsing_tests = [
+#     ('~~~((p-&y)<->(~~(p12+q12)))', None, '')
+# ]
 
 def test_parse_prefix(debug=False):
     if (debug):
@@ -110,6 +116,7 @@ def test_parse_prefix(debug=False):
     for s, f, r in parsing_tests:
         if debug:
             print("Testing parsing prefix of", s)
+        # import pdb;pdb.set_trace()
         ff, rr = Formula._parse_prefix(s)
         if ff is None:
             assert f is None, "_parse_prefix returned error: " + rr

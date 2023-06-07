@@ -63,13 +63,13 @@ def is_binary(string: str) -> bool:
     Returns:
         ``True`` if the given string is a binary operator, ``False`` otherwise.
     """
-    return string == '&' or string == '|' or string == '->'
+    return string in {'&', '|', '->', '+', '<->', '-&', '-|'}
     # For Chapter 3:
     # return string in {'&', '|',  '->', '+', '<->', '-&', '-|'}
 
 
 @lru_cache(maxsize=100)
-def parse_str(string: str) -> Tuple(str, str):
+def parse_str(string: str) -> Tuple[str, str]:
     """Parsed first valid representation of formula or first token.
 
     Parameters:
@@ -87,24 +87,11 @@ def parse_str(string: str) -> Tuple(str, str):
                 break
         len_decimals = len(decimals)
         return string[:len_decimals+1], string[len_decimals+1:]
-    elif string[:2] == "->":
+    elif string[:2] in {"->", "-&",  "-|"}:
         return string[:2], string[2:]
-    elif string[0] == '(':
-        counter = 0
-        for ind, ele in enumerate(string):
-            if ele == '(':
-                counter += 1
-            elif ele == ')':
-                counter -= 1
-            elif counter == 0:
-                break
-        else:
-            ind += 1
-        if counter:
-            return string[0], string[1:]
-        return string[:ind], string[ind:]
-    else:
-        return string[0], string[1:]
+    elif string[:3] == "<->":
+        return string[:3], string[3:]
+    return string[0], string[1:]
 
 
 @frozen
@@ -241,35 +228,30 @@ class Formula:
             is a string with some human-readable content.
         """
         # Task 1.4
-        if not string:  # string shouldn't be empty
-            return None, "string not found!"
-        # parses string to first representation of formula or first token and rest of string
+        if not string:
+            return None, "can't parse empty string!"
         first, rest = parse_str(string)
         if is_variable(first) or is_constant(first):
             return Formula(first), rest
-        elif is_binary(first):
-            return None, string
-        elif is_unary(first):
-            if not rest:
-                return None, first + " is unary not a valid formula!"
-            return Formula(first, Formula._parse_prefix(rest)[0]), Formula._parse_prefix(rest)[1]
-        elif first[0] == '(':
-            if first == '(':
-                return None, "some of \'(\' are not closed!"
-            first_f, _rest = Formula._parse_prefix(first[1:-1])
-            if not _rest:
-                return None, "there should be two formulas but one found!"
-            connective, _second = parse_str(_rest)
-            if not is_binary(connective):
-                return None, "wrong connective is been used!"
-            second_f, second_r = Formula._parse_prefix(_second)
-            if second_r:
-                if not second_f:
-                    return None, f"{second_r} is not a valid formula!"
-                return None, f"couldn\'t parse {second_r}!"
-            return Formula(connective, first_f, second_f), rest
-        else:
-            return None, string + " is not a valid formula!"
+        if is_binary(first):
+            return None, rest
+        if is_unary(first):
+            formula, error = Formula._parse_prefix(rest)
+            if not formula:
+                return formula, error
+            return Formula(first, formula), error
+        if first == '(':
+            first_formula, rest = Formula._parse_prefix(rest)
+            connective, rest = parse_str(rest)
+            second_formula, rest = Formula._parse_prefix(rest)
+            if not is_binary(connective) or not first_formula or not second_formula:
+                return None, "there should be at least two formulas in paranteses and a binary connective between!"
+            if not rest or rest[0] != ')':
+                return None, "opened parantese should be closed!"
+            return Formula(connective, first_formula, second_formula), rest[1:]
+        return None, "should enter a valid formula!"
+
+
 
     @staticmethod
     def is_formula(string: str) -> bool:
